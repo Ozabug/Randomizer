@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Randomness Machine</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background-color: #121212;
+      color: #f0f0f0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      padding: 20px;
+    }
+    header {
+      display: flex;
+      justify-content: space-between;
+      width: 100%;
+      max-width: 900px;
+      margin-bottom: 20px;
+    }
+    .theme-controls {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+    .btn {
+      background-color: #333;
+      color: white;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: transform 0.1s ease-in-out, background-color 0.3s;
+    }
+    .btn:hover {
+      background-color: #555;
+    }
+    .btn:active {
+      transform: scale(0.95);
+    }
+    .output {
+      width: 100%;
+      max-width: 900px;
+      margin: 20px 0;
+      padding: 20px;
+      border-radius: 8px;
+      background-color: #1e1e1e;
+      text-align: center;
+      min-height: 200px;
+    }
+    .feed {
+      width: 100%;
+      max-width: 900px;
+    }
+    .feed-item {
+      margin: 10px 0;
+      padding: 10px;
+      border-radius: 6px;
+      background-color: #2a2a2a;
+    }
+    img {
+      max-width: 100%;
+      border-radius: 8px;
+    }
+    .category-buttons {
+      margin-bottom: 20px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: center;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>🎲 Randomness Machine</h1>
+    <div class="theme-controls">
+      <button class="btn" onclick="setTheme('dark')">Dark</button>
+      <button class="btn" onclick="setTheme('light')">Light</button>
+      <input type="color" id="bgColorPicker" title="Background">
+      <input type="color" id="textColorPicker" title="Text">
+      <input type="color" id="accentColorPicker" title="Accent">
+      <button class="btn" onclick="applyCustomTheme()">Apply</button>
+    </div>
+  </header>
+
+  <div class="category-buttons">
+    <button class="btn" onclick="roll('animals')">Animals</button>
+    <button class="btn" onclick="roll('facts')">Facts</button>
+    <button class="btn" onclick="roll('quotes')">Quotes</button>
+    <button class="btn" onclick="roll('art')">Art</button>
+    <button class="btn" onclick="roll('pop')">Pop Culture</button>
+    <button class="btn" onclick="roll('misc')">Misc</button>
+    <button class="btn" onclick="rollAll()">Total Chaos</button>
+    <button class="btn" onclick="multiRoll()">Multi-Roll</button>
+  </div>
+
+  <div class="output" id="output">Press a button to generate randomness...</div>
+  <div class="feed" id="feed"></div>
+
+  <script>
+    const apis = {
+      animals: [
+        { name: "Dog CEO", url: "https://dog.ceo/api/breeds/image/random", type: "image", field: "message" },
+        { name: "Cat Facts", url: "https://catfact.ninja/fact", type: "json", field: "fact" },
+        { name: "Cataas", url: "https://cataas.com/cat?json=true", type: "json-image", field: "url" },
+        { name: "RandomFox", url: "https://randomfox.ca/floof/", type: "json", field: "image" }
+      ],
+      facts: [
+        { name: "Numbers API", url: "http://numbersapi.com/random/trivia", type: "text" },
+        { name: "Bored API", url: "https://www.boredapi.com/api/activity", type: "json", field: "activity" },
+        { name: "Random Data API (beer)", url: "https://random-data-api.com/api/v2/beers", type: "json", field: "name" }
+      ],
+      quotes: [
+        { name: "Advice Slip", url: "https://api.adviceslip.com/advice", type: "json", field: "slip.advice" },
+        { name: "Quotable", url: "https://api.quotable.io/random", type: "json", field: "content" },
+        { name: "Official Joke", url: "https://official-joke-api.appspot.com/random_joke", type: "json", field: "setup,punchline" }
+      ],
+      art: [
+        { name: "Art Institute of Chicago", url: "https://api.artic.edu/api/v1/artworks?page=1&limit=1", type: "json", field: "data[0].title" },
+        { name: "Colormind", url: "http://colormind.io/api/", type: "json", field: "" }
+      ],
+      pop: [
+        { name: "PokéAPI", url: "https://pokeapi.co/api/v2/pokemon/ditto", type: "json", field: "name" },
+        { name: "Studio Ghibli", url: "https://ghibliapi.vercel.app/films", type: "json", field: "0.title" },
+        { name: "XKCD", url: "https://xkcd.com/info.0.json", type: "json", field: "title" }
+      ],
+      misc: [
+        { name: "Wikipedia", url: "https://en.wikipedia.org/api/rest_v1/page/random/summary", type: "json", field: "title" },
+        { name: "Random User", url: "https://randomuser.me/api/", type: "json", field: "results[0].name.first" },
+        { name: "Universities", url: "http://universities.hipolabs.com/search?country=United+States", type: "json", field: "0.name" },
+        { name: "Zippopotam", url: "https://api.zippopotam.us/us/90210", type: "json", field: "places[0]['place name']" }
+      ]
+    };
+
+    function setTheme(mode) {
+      if (mode === 'dark') {
+        document.body.style.backgroundColor = '#121212';
+        document.body.style.color = '#f0f0f0';
+      } else if (mode === 'light') {
+        document.body.style.backgroundColor = '#ffffff';
+        document.body.style.color = '#000000';
+      }
+    }
+
+    function applyCustomTheme() {
+      document.body.style.backgroundColor = document.getElementById('bgColorPicker').value;
+      document.body.style.color = document.getElementById('textColorPicker').value;
+      const accent = document.getElementById('accentColorPicker').value;
+      document.querySelectorAll('.btn').forEach(btn => {
+        btn.style.backgroundColor = accent;
+      });
+    }
+
+    async function fetchAPI(api) {
+      try {
+        let response = await fetch(api.url);
+        if (!response.ok) throw new Error('Network error');
+        if (api.type === 'text') {
+          return await response.text();
+        } else {
+          let data = await response.json();
+          if (api.type === 'image') {
+            return `<img src="${data[api.field]}" alt="Random image">`;
+          }
+          if (api.type === 'json') {
+            return getField(data, api.field);
+          }
+          if (api.type === 'json-image') {
+            return `<img src="https://cataas.com${data[api.field]}" alt="Cat">`;
+          }
+        }
+      } catch (e) {
+        return "Retrying...";
+      }
+    }
+
+    function getField(obj, fieldPath) {
+      try {
+        if (fieldPath.includes(',')) {
+          return fieldPath.split(',').map(f => getField(obj, f)).join(" - ");
+        }
+        return fieldPath.split('.').reduce((o, i) => o[i], obj);
+      } catch {
+        return "No data";
+      }
+    }
+
+    async function roll(category) {
+      const pool = apis[category];
+      const api = pool[Math.floor(Math.random() * pool.length)];
+      let result = await fetchAPI(api);
+      if (result === "Retrying...") return roll(category);
+      displayResult(api.name, result);
+    }
+
+    async function rollAll() {
+      const categories = Object.keys(apis);
+      const randomCategory = categories[Math.floor(Math.random() * categories.length)];
+      roll(randomCategory);
+    }
+
+    async function multiRoll() {
+      for (let i = 0; i < 3; i++) {
+        await rollAll();
+      }
+    }
+
+    function displayResult(name, result) {
+      const output = document.getElementById('output');
+      const feed = document.getElementById('feed');
+      if (output.innerHTML !== "Press a button to generate randomness...") {
+        const old = document.createElement('div');
+        old.className = 'feed-item';
+        old.innerHTML = output.innerHTML;
+        feed.prepend(old);
+      }
+      output.innerHTML = `<h2>${name}</h2><p>${result}</p><button onclick="saveResult('${name}: ${result.replace(/'/g, "")}')">Save</button>
+      <button onclick="shareResult('${name}: ${result.replace(/'/g, "")}')">Share</button>`;
+    }
+
+    function saveResult(text) {
+      let saved = JSON.parse(localStorage.getItem('favorites') || "[]");
+      saved.push(text);
+      localStorage.setItem('favorites', JSON.stringify(saved));
+      alert("Saved!");
+    }
+
+    function shareResult(text) {
+      navigator.clipboard.writeText(text);
+      alert("Copied to clipboard!");
+    }
+  </script>
+</body>
+</html>
